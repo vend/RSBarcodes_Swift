@@ -109,25 +109,25 @@ public class RSAbstractCodeGenerator : RSCodeGenerator {
         let width = length + 4
         let size = CGSizeMake(CGFloat(width), 28)
         UIGraphicsBeginImageContextWithOptions(size, false, 0)
-        let context = UIGraphicsGetCurrentContext()
-        
-        CGContextSetShouldAntialias(context!, false)
-        
-        self.fillColor.setFill()
-        self.strokeColor.setStroke()
-        
-        CGContextFillRect(context!, CGRectMake(0, 0, size.width, size.height))
-        CGContextSetLineWidth(context!, 1)
-        
-        for i in 0..<length {
-            let character = completeBarcode[i]
-            if character == "1" {
-                let x = i + (2 + 1)
-                CGContextMoveToPoint(context!, CGFloat(x), 1.5)
-                CGContextAddLineToPoint(context!, CGFloat(x), size.height - 2)
+        if let context = UIGraphicsGetCurrentContext() {
+            CGContextSetShouldAntialias(context, false)
+            
+            self.fillColor.setFill()
+            self.strokeColor.setStroke()
+            
+            CGContextFillRect(context, CGRectMake(0, 0, size.width, size.height))
+            CGContextSetLineWidth(context, 1)
+            
+            for i in 0..<length {
+                let character = completeBarcode[i]
+                if character == "1" {
+                    let x = i + (2 + 1)
+                    CGContextMoveToPoint(context, CGFloat(x), 1.5)
+                    CGContextAddLineToPoint(context, CGFloat(x), size.height - 2)
+                }
             }
+            CGContextDrawPath(context, CGPathDrawingMode.FillStroke)
         }
-        CGContextDrawPath(context!, CGPathDrawingMode.FillStroke)
         let barcode = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         return barcode
@@ -179,15 +179,14 @@ public class RSAbstractCodeGenerator : RSCodeGenerator {
                 filter.setDefaults()
                 let inputMessage = contents.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)
                 filter.setValue(inputMessage, forKey: "inputMessage")
-                if filterName == "CIQRCodeGenerator" {
-                    filter.setValue(inputCorrectionLevel.rawValue, forKey: "inputCorrectionLevel")
-                }
+                filter.setValue(inputCorrectionLevel.rawValue, forKey: "inputCorrectionLevel")
                 
                 let outputImage = filter.outputImage
                 let context = CIContext(options: nil)
                 if let outputImage = outputImage {
-                    let cgImage = context.createCGImage(outputImage, fromRect: outputImage.extent)
-                    return UIImage(CGImage: cgImage!, scale: 1, orientation: UIImageOrientation.Up)
+                    if let cgImage = context.createCGImage(outputImage, fromRect: outputImage.extent) {
+                        return UIImage(CGImage: cgImage, scale: 1, orientation: UIImageOrientation.Up)
+                    }
                 }
             }
         }
@@ -199,20 +198,21 @@ public class RSAbstractCodeGenerator : RSCodeGenerator {
     }
     
     // Resize image
-    public class func resizeImage(source:UIImage, scale:CGFloat) -> UIImage {
+    public class func resizeImage(source:UIImage, scale:CGFloat) -> UIImage? {
         let width = source.size.width * scale
         let height = source.size.height * scale
         
         UIGraphicsBeginImageContext(CGSizeMake(width, height))
-        let context = UIGraphicsGetCurrentContext()
-        CGContextSetInterpolationQuality(context!, CGInterpolationQuality.None)
+        if let context = UIGraphicsGetCurrentContext() {
+            CGContextSetInterpolationQuality(context, CGInterpolationQuality.None)
+        }
         source.drawInRect(CGRectMake(0, 0, width, height))
         let target = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
-        return target!
+        return target
     }
     
-    public class func resizeImage(source:UIImage, targetSize:CGSize, contentMode:UIViewContentMode) -> UIImage {
+    public class func resizeImage(source:UIImage, targetSize:CGSize, contentMode:UIViewContentMode) -> UIImage? {
         var x: CGFloat = 0
         var y: CGFloat = 0
         var width = targetSize.width
@@ -228,9 +228,11 @@ public class RSAbstractCodeGenerator : RSCodeGenerator {
             x = (targetSize.width  - width)  / 2.0
             y = (targetSize.height - height) / 2.0
         } else  { // contents scaled to fit with fixed aspect. remainder is transparent
-            let scaledRect = AVMakeRectWithAspectRatioInsideRect(source.size, CGRectMake(0.0, 0.0, targetSize.width, targetSize.height))
-            width = scaledRect.width
-            height = scaledRect.height
+            let targtLength  = (targetSize.height < targetSize.width)   ? targetSize.height  : targetSize.width
+            let sourceLength = (source.size.height > source.size.width) ? source.size.height : source.size.width
+            let fillScale = targtLength / sourceLength
+            width = source.size.width * fillScale
+            height = source.size.height * fillScale
             if (contentMode == UIViewContentMode.ScaleAspectFit
                 || contentMode == UIViewContentMode.Redraw
                 || contentMode == UIViewContentMode.Center) {
@@ -264,11 +266,12 @@ public class RSAbstractCodeGenerator : RSCodeGenerator {
         }
 
         UIGraphicsBeginImageContext(targetSize)
-        let context = UIGraphicsGetCurrentContext()
-        CGContextSetInterpolationQuality(context!, CGInterpolationQuality.None)
+        if let context = UIGraphicsGetCurrentContext() {
+            CGContextSetInterpolationQuality(context, CGInterpolationQuality.None)
+        }
         source.drawInRect(CGRectMake(x, y, width, height))
         let target = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
-        return target!
+        return target
     }
 }

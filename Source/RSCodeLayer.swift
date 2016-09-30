@@ -13,10 +13,10 @@ public class RSCodeLayer: CALayer {
     var code: UIImage?
     
     override public func drawInContext(ctx: CGContext) {
-        if let code = self.code {
+        if let code = self.code, cgImage = code.CGImage {
             CGContextSaveGState(ctx)
             
-            CGContextDrawImage(ctx, self.bounds, code.CGImage!)
+            CGContextDrawImage(ctx, self.bounds, cgImage)
             
             CGContextRestoreGState(ctx)
         }
